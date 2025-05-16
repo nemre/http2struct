@@ -96,11 +96,11 @@ func Convert(request *http.Request, destination any) error {
 			}
 
 			file, fileHeader, err := request.FormFile(tag)
-			if err != nil && !errors.Is(err, http.ErrMissingFile) {
-				return fmt.Errorf("failed to get %q form file for %q field: %w", tag, field.Name, err)
-			}
-			if err != nil && errors.Is(err, http.ErrMissingFile) {
+			if errors.Is(err, http.ErrMissingFile) {
 				continue
+			}
+			if err != nil {
+				return fmt.Errorf("failed to get %q form file for %q field: %w", tag, field.Name, err)
 			}
 
 			defer file.Close()
@@ -137,16 +137,24 @@ func Convert(request *http.Request, destination any) error {
 				return fmt.Errorf("%q type is not supported for %q field", fieldValue.Type().String(), field.Name)
 			}
 
+			if request.ContentLength == 0 {
+				return nil
+			}
+
 			contentDisposition := request.Header.Get("Content-Disposition")
 
 			_, params, err := mime.ParseMediaType(contentDisposition)
 			if err != nil {
-				return fmt.Errorf("failed to parse %q raw body media type for %q field: %w", tag, field.Name, err)
+				continue
 			}
 
 			filename := params["filename"]
 			if filename == "" {
 				filename = params["filename*"]
+			}
+
+			if filename == "" {
+				continue
 			}
 
 			content, err := io.ReadAll(request.Body)
