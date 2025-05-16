@@ -3,11 +3,19 @@ package http2struct
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"mime"
 	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
 )
+
+type File struct {
+	Name    string
+	Size    int64
+	Content []byte
+}
 
 func Convert(request *http.Request, destination any) error {
 	if request == nil {
@@ -49,7 +57,111 @@ func Convert(request *http.Request, destination any) error {
 			continue
 		}
 
-		tag, ok := field.Tag.Lookup("header")
+		tag, ok := field.Tag.Lookup("form")
+		if ok && tag != "" && tag != "-" {
+			if request.PostForm == nil {
+				if err := request.ParseMultipartForm(32 << 20); err != nil {
+					return fmt.Errorf("failed to parse request multipart form: %w", err)
+				}
+			}
+
+			var v string
+
+			if p := request.PostForm[tag]; len(p) > 0 {
+				v = p[0]
+			}
+
+			if err := convert(fieldValue, field.Type, v); err != nil {
+				return fmt.Errorf("failed to convert %q form to %q field: %w", tag, field.Name, err)
+			}
+
+			continue
+		}
+
+		tag, ok = field.Tag.Lookup("file")
+		if ok && tag != "" && tag != "-" {
+			if field.Type.Kind() != reflect.Pointer && field.Type != reflect.TypeOf(File{}) {
+				return fmt.Errorf("%q type is not supported for %q field", fieldValue.Type().String(), field.Name)
+			}
+
+			if field.Type.Kind() == reflect.Pointer && field.Type != reflect.TypeOf(&File{}) {
+				return fmt.Errorf("%q type is not supported for %q field", fieldValue.Type().String(), field.Name)
+			}
+
+			file, fileHeader, err := request.FormFile(tag)
+			if err != nil {
+				return fmt.Errorf("failed to get %q form file for %q field: %w", tag, field.Name, err)
+			}
+
+			defer file.Close()
+
+			content, err := io.ReadAll(file)
+			if err != nil {
+				return fmt.Errorf("failed to read %q form file content for %q field: %w", tag, field.Name, err)
+			}
+
+			f := File{
+				Name:    fileHeader.Filename,
+				Size:    fileHeader.Size,
+				Content: content,
+			}
+
+			if field.Type.Kind() == reflect.Pointer {
+				fieldValue.Set(reflect.ValueOf(&f))
+
+				continue
+			}
+
+			fieldValue.Set(reflect.ValueOf(f))
+
+			continue
+		}
+
+		tag, ok = field.Tag.Lookup("raw")
+		if ok && tag != "" && tag != "-" {
+			if field.Type.Kind() != reflect.Pointer && field.Type != reflect.TypeOf(File{}) {
+				return fmt.Errorf("%q type is not supported for %q field", fieldValue.Type().String(), field.Name)
+			}
+
+			if field.Type.Kind() == reflect.Pointer && field.Type != reflect.TypeOf(&File{}) {
+				return fmt.Errorf("%q type is not supported for %q field", fieldValue.Type().String(), field.Name)
+			}
+
+			contentDisposition := request.Header.Get("Content-Disposition")
+
+			_, params, err := mime.ParseMediaType(contentDisposition)
+			if err != nil {
+				return fmt.Errorf("failed to parse %q raw body media type for %q field: %w", tag, field.Name, err)
+			}
+
+			filename := params["filename"]
+			if filename == "" {
+				filename = params["filename*"]
+			}
+
+			content, err := io.ReadAll(request.Body)
+			if err != nil {
+				return fmt.Errorf("failed to read %q raw body for %q field: %w", tag, field.Name, err)
+			}
+
+			f := File{
+				Name:    filename,
+				Size:    request.ContentLength,
+				Content: content,
+			}
+
+			if field.Type.Kind() == reflect.Pointer {
+				fieldValue.Set(reflect.ValueOf(&f))
+
+				continue
+			}
+
+			fieldValue.Set(reflect.ValueOf(f))
+
+			continue
+		}
+
+		tag, ok = field.Tag.Lookup("header")
 		if ok && tag != "" && tag != "-" {
 			v := request.Header.Get(tag)
 
