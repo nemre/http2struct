@@ -58,6 +58,8 @@ func Convert(request *http.Request, destination any) error {
 			continue
 		}
 
+		fieldValue.SetZero()
+
 		tag, ok := field.Tag.Lookup("form")
 		if ok && tag != "" && tag != "-" {
 			if request.PostForm == nil {
@@ -255,8 +257,6 @@ func convertBody(request *http.Request, destination any, destinationType reflect
 
 func convert(field reflect.Value, fieldType reflect.Type, value string) error {
 	if value == "" {
-		field.SetZero()
-
 		return nil
 	}
 
