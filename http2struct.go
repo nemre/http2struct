@@ -1,3 +1,13 @@
+// Package http2struct provides functionality to automatically map HTTP request data
+// into Go struct fields using struct tags.
+//
+// It supports mapping from various sources:
+// - JSON request body
+// - Form fields
+// - URL query parameters
+// - Path parameters
+// - HTTP headers
+// - File uploads (both multipart and binary)
 package http2struct
 
 import (
@@ -12,12 +22,24 @@ import (
 	"strings"
 )
 
+// File represents an uploaded file from an HTTP request
 type File struct {
-	Name    string
-	Size    int64
-	Content []byte
+	Name    string // Original filename provided by the client
+	Size    int64  // Size of the file in bytes
+	Content []byte // Raw content of the file
 }
 
+// Convert maps data from an HTTP request into a struct.
+// The destination must be a pointer to a struct with appropriate tags.
+//
+// Supported struct tags:
+// - `json:"field_name"` - Maps JSON body fields
+// - `form:"field_name"` - Maps form fields
+// - `query:"param_name"` - Maps URL query parameters
+// - `path:"param_name"` - Maps URL path parameters
+// - `header:"Header-Name"` - Maps HTTP headers
+// - `file:"field_name"` - Maps uploaded files from multipart forms
+// - `file:"binary"` - Maps the entire request body as a file
 func Convert(request *http.Request, destination any) error {
 	if request == nil {
 		return fmt.Errorf("request cannot be nil")
