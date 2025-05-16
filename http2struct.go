@@ -2,6 +2,7 @@ package http2struct
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -88,9 +89,18 @@ func Convert(request *http.Request, destination any) error {
 				return fmt.Errorf("%q type is not supported for %q field", fieldValue.Type().String(), field.Name)
 			}
 
+			base, _, _ := strings.Cut(request.Header.Get("Content-Type"), ";")
+
+			if strings.TrimSpace(base) != "multipart/form-data" {
+				continue
+			}
+
 			file, fileHeader, err := request.FormFile(tag)
-			if err != nil {
+			if err != nil && !errors.Is(err, http.ErrMissingFile) {
 				return fmt.Errorf("failed to get %q form file for %q field: %w", tag, field.Name, err)
+			}
+			if err != nil && errors.Is(err, http.ErrMissingFile) {
+				continue
 			}
 
 			defer file.Close()
