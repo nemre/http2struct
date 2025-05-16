@@ -79,7 +79,7 @@ func Convert(request *http.Request, destination any) error {
 		}
 
 		tag, ok = field.Tag.Lookup("file")
-		if ok && tag != "" && tag != "-" {
+		if ok && tag != "" && tag != "-" && tag != "binary" {
 			if field.Type.Kind() != reflect.Pointer && field.Type != reflect.TypeOf(File{}) {
 				return fmt.Errorf("%q type is not supported for %q field", fieldValue.Type().String(), field.Name)
 			}
@@ -117,8 +117,8 @@ func Convert(request *http.Request, destination any) error {
 			continue
 		}
 
-		tag, ok = field.Tag.Lookup("raw")
-		if ok && tag != "" && tag != "-" {
+		tag, ok = field.Tag.Lookup("file")
+		if ok && tag == "binary" {
 			if field.Type.Kind() != reflect.Pointer && field.Type != reflect.TypeOf(File{}) {
 				return fmt.Errorf("%q type is not supported for %q field", fieldValue.Type().String(), field.Name)
 			}
