@@ -141,7 +141,6 @@ type ComplexRequest struct {
     
     // File uploads
     Avatar    File  `file:"avatar"`
-    Documents []File `file:"documents"` // Not currently supported, shown for future consideration
 }
 ```
 
