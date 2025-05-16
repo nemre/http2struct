@@ -1,4 +1,4 @@
-# http2struct: Go Library for Converting HTTP Requests to Structs
+# http2struct: Go Library for Converting / Binding HTTP Requests to Structs
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/nemre/http2struct.svg)](https://pkg.go.dev/github.com/nemre/http2struct)
 
