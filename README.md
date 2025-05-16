@@ -14,7 +14,7 @@ This simplifies HTTP request processing and helps you write more readable and ma
 - **Slice Support:** Can convert comma-separated values into slices.
 - **Flexible Tagging:** You can specify data sources through custom tags in your struct fields.
 - **Error Handling:** Provides detailed error reporting during the conversion process.
-- **Handles Invisible Problems:** Other HTTP frameworks or libraries bind values from the body to the corresponding field even if there is no header or query parameter present in request. This library does not do that.
+- **Handles Invisible Problems:** Other HTTP framework binder functions or libraries bind values from the body to the corresponding field even if there is no header or query parameter present in request. This library does not do that.
 
 ## Benefits
 
